@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DFC Auction Project - Dogar Football Club Multan</title>
+  <meta name="description" content="Official real-time auction platform for DFC Multan players. Live bidding, rosters, and statistics.">
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  
+  <!-- Canvas for Confetti Celebrations -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Main Header -->
+  <header>
+    <div class="logo-container">
+      <img src="images/1.png" alt="DFC Logo" style="height: 40px; border-radius: 4px; object-fit: contain;">
+      <h1>DFC AUCTION PROJECT</h1>
+    </div>
+    <div class="header-meta" id="header-meta" style="display: none;">
+      <span class="role-badge" id="role-display">Spectator</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="login-container">
+      <h2>Welcome to DFC Auction</h2>
+      <p>Select your access role and enter password</p>
+      
+      <div id="login-error" style="color: #ff3b30; margin-bottom: 1rem; font-weight: 600; display: none;"></div>
+
+      <div class="form-group">
+        <label for="role-select">Select Access Role</label>
+        <select id="role-select" onchange="togglePasswordInput()">
+          <option value="spectator">Spectator / Live Screen</option>
+          <option value="coordinator">Auction Coordinator</option>
+          <option value="team1">Dogar Warriors (Team)</option>
+          <option value="team2">Multan Sultans (Team)</option>
+          <option value="team3">DFC United (Team)</option>
+          <option value="team4">Royal Strikers (Team)</option>
+          <option value="team5">Super Kings (Team)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="password-group" style="display: none;">
+        <label for="password-input">Enter Access Password</label>
+        <input type="password" id="password-input" placeholder="••••••••">
+      </div>
+
+      <button class="login-btn" onclick="handleLogin()">Access Dashboard</button>
+    </div>
+
+    <!-- 2. SPECTATOR / MAIN ARENA SCREEN -->
+    <div id="spectator-screen" class="dashboard" style="display: none;">
+      <!-- Active Bidding Arena -->
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Live Bidding Block</span>
+          <span id="clearance-badge" class="text-Emerging" style="display: none; font-size: 0.9rem; font-weight: 800;">[ clearance round - 50% off ]</span>
+        </div>
+        
+        <div class="arena-view" id="active-bidding-area" style="display: none;">
+          <!-- Left: Player card display -->
+          <div class="player-bidding-card" id="bidding-card-container">
+            <div class="stamp stamp-sold" id="sold-stamp">Sold</div>
+            <div class="stamp stamp-unsold" id="unsold-stamp">Unsold</div>
+            <img id="bidding-player-image" src="" alt="Player Card">
+          </div>
+
+          <!-- Right: Bidding Status & Bid History -->
+          <div class="bid-details">
+            <div>
+              <div class="bid-status-box">
+                <div class="bid-label" id="bid-box-label">Current Bid</div>
+                <div class="bid-amount" id="current-bid-display">0 DFC</div>
+                <div class="bidder-name" id="current-bidder-display">No Bids Yet</div>
+              </div>
+
+              <!-- Real-time bidding logs -->
+              <h3 class="bid-label" style="margin-bottom: 0.5rem;">Bidding History</h3>
+              <div class="bid-history-list" id="bid-history-list">
+                <!-- Javascript will populate this -->
+              </div>
+            </div>
+
+            <!-- Context Info -->
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.01); border-radius: 8px;">
+              <h4 id="player-details-title" style="margin-bottom: 0.4rem;">Player Details</h4>
+              <p style="font-size: 0.9rem; color: var(--text-muted);">
+                Category: <span id="player-details-category" class="brand-font" style="font-weight: 700;">Platinum</span><br>
+                Original Base Price: <span id="player-details-base" style="color: #fff; font-weight: 600;">8,000 DFC Coins</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div id="no-active-bidding" style="text-align: center; padding: 6rem 2rem; color: var(--text-muted);">
+          <h2>No Player on Bidding Block</h2>
+          <p>Please wait for the coordinator to start the next round.</p>
+        </div>
+      </div>
+
+      <!-- Right: Quick Standings / Budgets -->
+      <div class="card-panel">
+        <h2 class="panel-title">Team Standings</h2>
+        <div id="team-list-container" style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- JavaScript will render teams here -->
+        </div>
+      </div>
+
+      <!-- Bottom Roster Summary -->
+      <div class="card-panel" style="grid-column: 1 / -1;">
+        <h2 class="panel-title">Team Rosters</h2>
+        <div class="roster-grid" id="rosters-grid-container">
+          <!-- JavaScript will render detailed team rosters here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. TEAM DASHBOARD SCREEN -->
+    <div id="team-screen" class="dashboard" style="display: none;">
+      <!-- Active Bidding Block -->
+      <div class="card-panel">
+        <div class="panel-title">
+          <span id="team-portal-name">Team Dashboard</span>
+          <span id="team-budget-display" style="color: var(--color-gold); font-weight: 800; font-size: 1.3rem;">Budget: 100,000 DFC</span>
+        </div>
+
+        <div class="arena-view" id="team-bidding-area" style="display: none;">
+          <!-- Left: Player Image -->
+          <div class="player-bidding-card">
+            <img id="team-player-image" src="" alt="Player Card" style="max-height: 400px;">
+          </div>
+
+          <!-- Right: Bidding Actions -->
+          <div class="bid-details">
+            <div class="bid-status-box">
+              <div class="bid-label">Current Bid</div>
+              <div class="bid-amount" id="team-current-bid">0 DFC</div>
+              <div class="bidder-name" id="team-current-bidder">No Bids Yet</div>
+            </div>
+
+            <!-- Bidding Controls -->
+            <div id="team-bidding-controls" style="text-align: center;">
+              <p class="bid-label" style="margin-bottom: 0.8rem;">Place Your Bid</p>
+              
+              <div class="button-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <button class="btn btn-secondary" onclick="teamIncrementBid(500)">+500</button>
+                <button class="btn btn-secondary" onclick="teamIncrementBid(1000)">+1k</button>
+                <button class="btn btn-secondary" onclick="teamIncrementBid(2000)">+2k</button>
+                <button class="btn btn-secondary" onclick="teamIncrementBid(5000)">+5k</button>
+              </div>
+
+              <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                <input type="number" id="custom-bid-input" placeholder="Custom bid amount" style="flex: 1; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none;">
+                <button class="btn btn-primary" onclick="submitCustomBid()">Bid</button>
+              </div>
+
+              <p id="bid-error" style="color: #ff3b30; font-size: 0.85rem; font-weight: 600; margin-top: 0.8rem; display: none;"></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="team-no-active" style="text-align: center; padding: 6rem 2rem; color: var(--text-muted);">
+          <h2>No Player on Bidding Block</h2>
+          <p>Please wait for the coordinator to start bidding.</p>
+        </div>
+      </div>
+
+      <!-- Right: Team Roster -->
+      <div class="card-panel">
+        <h2 class="panel-title">Your Roster</h2>
+        <div class="team-players-list" id="team-roster-list" style="max-height: 480px;">
+          <!-- Javascript will render player roster -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. COORDINATOR DASHBOARD SCREEN -->
+    <div id="coordinator-screen" class="card-panel" style="display: none;">
+      <div class="panel-title">
+        <span>Auction Control Panel</span>
+        <div>
+          <button class="btn btn-danger" onclick="resetAuction()" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Entire Auction</button>
+        </div>
+      </div>
+
+      <div class="coordinator-controls">
+        <!-- Left Column: Players Picker -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3>Players Database</h3>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <label style="font-size: 0.85rem; color: var(--text-muted);" for="category-filter">Category:</label>
+              <select id="category-filter" onchange="renderCoordinatorPlayers()" style="padding: 0.3rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+                <option value="all">All Categories</option>
+                <option value="Platinum">Platinum</option>
+                <option value="Gold">Gold</option>
+                <option value="Silver">Silver</option>
+                <option value="Emerging">Emerging</option>
+              </select>
+
+              <label style="font-size: 0.85rem; color: var(--text-muted);" for="status-filter">Status:</label>
+              <select id="status-filter" onchange="renderCoordinatorPlayers()" style="padding: 0.3rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+                <option value="Unsold">Unsold Only</option>
+                <option value="Sold">Sold Only</option>
+                <option value="all">All Players</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="player-picker" id="coordinator-player-list">
+            <!-- JavaScript will render player items here -->
+          </div>
+        </div>
+
+        <!-- Right Column: Active Bidding Block controls -->
+        <div style="border-left: 1px solid var(--border-color); padding-left: 2rem;">
+          <h3>Active Bidding Controller</h3>
+          
+          <div id="coordinator-active-player" style="margin-top: 1.5rem; display: none;">
+            <div style="text-align: center; margin-bottom: 1rem;">
+              <img id="coordinator-player-img" src="" alt="Player Card" style="max-height: 250px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+              <h2 id="coordinator-player-name" style="margin-top: 0.5rem;">Player Name</h2>
+              <p id="coordinator-player-category" style="font-weight: 700; text-transform: uppercase;">Platinum</p>
+            </div>
+
+            <div class="bid-status-box">
+              <div class="bid-label">Current Bid</div>
+              <div class="bid-amount" id="coordinator-current-bid">0 DFC</div>
+              <div class="bidder-name" id="coordinator-current-bidder">No Bids Yet</div>
+            </div>
+
+            <div class="button-grid">
+              <button class="btn btn-success" id="sold-btn" onclick="sellPlayer()">Mark SOLD</button>
+              <button class="btn btn-danger" id="unsold-btn" onclick="markUnsold()">Mark UNSOLD</button>
+              <button class="btn btn-secondary" style="grid-column: 1 / -1;" onclick="clearBlock()">Clear Block (Next Player)</button>
+            </div>
+
+            <!-- Manual bid entry for admin -->
+            <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+              <h4>Place Bid on Behalf of Team</h4>
+              <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem; flex-direction: column;">
+                <select id="admin-bidder-select" style="padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; color: white;">
+                  <!-- Javascript will render team options -->
+                </select>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="number" id="admin-bid-amount" placeholder="Bid Amount" style="flex: 1; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; color: white;">
+                  <button class="btn btn-primary" onclick="adminPlaceBid()">Submit Bid</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="coordinator-no-active" style="text-align: center; padding: 6rem 1rem; color: var(--text-muted);">
+            <h4>No Active Player on Block</h4>
+            <p>Select a player from the list on the left to start bidding.</p>
+            
+            <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; text-align: left;">
+              <h4>Clearance Settings</h4>
+              <div style="margin-top: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="font-weight: 600;">Unsold Player Clearance Mode</span>
+                  <p style="font-size: 0.8rem; color: var(--text-muted);">Reduces base price of unsold players by 50%.</p>
+                </div>
+                <input type="checkbox" id="clearance-checkbox" onchange="toggleClearanceRound()" style="width: 24px; height: 24px; cursor: pointer;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer style="text-align: center; padding: 1.5rem; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-muted); margin-top: auto;">
+    &copy; 2026 Dogar Football Club Multan. All Rights Reserved. Powered by Muhammad Rayyan.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
