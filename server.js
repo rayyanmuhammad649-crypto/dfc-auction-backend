@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Path definitions
 const STATE_FILE = path.join(__dirname, 'data', 'auction_state.json');
